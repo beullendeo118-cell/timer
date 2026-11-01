@@ -1,0 +1,912 @@
+/* ============================================================================
+   뽀모도로 타이머 - 스타일
+   ----------------------------------------------------------------------------
+   ★ 색상 · 크기 · 둥글기는 아래 :root 변수만 바꾸면 전체에 반영됩니다.
+   구조
+     1. 색상/변수
+     2. 기본 레이아웃 (타이머 + 사이드바)
+     3. 타이머 앱
+     4. 모드 선택 탭
+     5. 타이머(원형 링)
+     6. 버튼
+     7. 하단 세션 표시
+     8. 사이드바 (세그먼트 타이머, 음악 플레이어)
+     9. 상태별 색상 / 애니메이션 / 반응형
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   1. 색상 및 공통 변수
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #14161a; /* 배경 */
+  --surface: #1b1e24; /* 카드/탭 배경 */
+  --surface-hover: #22262e; /* hover, 선택된 탭 */
+  --text: #eef1f6; /* 기본 글자 */
+  --muted: #7c8493; /* 보조 글자 */
+  --line: #2a2f38; /* 테두리 */
+  --accent: #ff6b5b; /* 집중 모드 포인트 색 (주황/빨강) */
+  --accent-soft: rgba(255, 107, 91, 0.14);
+  --danger: #ff5c5c; /* 세그먼트 타이머 초과(경고) 색 */
+  --ring-track: #262b34; /* 링의 바탕(빈 부분) 색 */
+  --radius: 999px; /* 알약 모양 둥글기 */
+  --card-radius: 20px; /* 사이드바 카드 둥글기 */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); /* 부드러운 움직임 */
+}
+
+/* 모든 요소의 크기 계산을 쉽게 (padding 포함) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* hidden 속성이 붙은 요소는 항상 숨김 (display:flex 등에 덮이지 않도록) */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* 화면 정중앙에 앱 배치 */
+body {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ----------------------------------------------------------------------------
+   2. 기본 레이아웃 (왼쪽 타이머 + 오른쪽 사이드바)
+   -------------------------------------------------------------------------- */
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  gap: clamp(14px, 2vw, 32px); /* 사이드바와 타이머 사이 간격 */
+}
+
+/* 타이머 앱 */
+.app {
+  width: 100%;
+  max-width: 340px; /* 앱 전체 폭 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px; /* 각 블록 사이 간격 */
+}
+
+.app__header {
+  text-align: center;
+}
+
+/* "POMODORO" 제목 */
+.app__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.app__subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+/* ----------------------------------------------------------------------------
+   3. 모드 선택 탭 (집중 / 짧은 휴식 / 긴 휴식)
+   -------------------------------------------------------------------------- */
+.modes {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.mode {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease);
+}
+
+.mode:hover {
+  color: var(--text);
+}
+
+/* 현재 선택된 모드 */
+.mode.is-active {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------------------------
+   4. 타이머 (원형 링 + 시간)
+   -------------------------------------------------------------------------- */
+.timer {
+  position: relative;
+  width: 260px; /* 링 전체 크기 */
+  height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+/* SVG 링을 타이머 영역에 꽉 채움 */
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* 12시 방향에서 시작하도록 회전 */
+}
+
+.ring__track,
+.ring__progress {
+  fill: none;
+  stroke-width: 6; /* 링 두께 */
+}
+
+/* 바탕 링 (회색 원) */
+.ring__track {
+  stroke: var(--ring-track);
+}
+
+/* 진행 링 (남은 시간만큼 남아 있음) */
+.ring__progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 678.58; /* 2πr (r=108) — script.js 의 CIRCUMFERENCE 와 동일 */
+  stroke-dashoffset: 0; /* script.js 가 남은 비율에 따라 값을 바꿈 */
+  transition: stroke-dashoffset 0.35s linear, stroke 0.4s var(--ease);
+}
+
+.timer__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 25:00 시간 글자 */
+.timer__time {
+  font-size: 56px; /* 시간 글자 크기 */
+  font-weight: 300;
+  font-variant-numeric: tabular-nums; /* 숫자 폭을 고정해 흔들리지 않게 */
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* "집중 시간" 같은 작은 라벨 */
+.timer__label {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ----------------------------------------------------------------------------
+   5. 버튼
+   -------------------------------------------------------------------------- */
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  min-width: 108px;
+  padding: 13px 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease),
+    border-color 0.2s var(--ease), transform 0.1s var(--ease);
+}
+
+/* 사이드바에서 쓰는 작은 버튼 */
+.btn--sm {
+  min-width: 0;
+  padding: 9px 16px;
+  font-size: 13px;
+}
+
+/* 눌렀을 때 살짝 작아지는 효과 */
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 키보드로 이동했을 때 테두리 표시 (접근성) */
+.btn:focus-visible,
+.mode:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 시작/일시정지 버튼 */
+.btn--primary {
+  background: var(--accent);
+  color: #16181d;
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* 초기화 / MP3 선택 버튼 */
+.btn--ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.btn--ghost:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------------------------
+   6. 하단 세션 표시 (점 + 완료 횟수)
+   -------------------------------------------------------------------------- */
+.sessions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sessions__dots {
+  display: flex;
+  gap: 6px;
+}
+
+/* 점 하나 (script.js 가 4개를 만들어 넣습니다) */
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 0.3s var(--ease);
+}
+
+/* 완료한 집중만큼 채워진 점 */
+.dot.is-filled {
+  background: var(--accent);
+}
+
+.sessions__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------------------
+   7. 사이드바
+   -------------------------------------------------------------------------- */
+.sidebar {
+  width: clamp(240px, 24vw, 300px); /* 화면이 넓으면 300px, 좁으면 240px */
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 왼쪽 목표 사이드바는 조금 더 좁게 */
+.sidebar--goals {
+  width: clamp(180px, 18vw, 230px);
+}
+
+/* ----------------------------------------------------------------------------
+   7-1. 왼쪽 사이드바 (목표)
+   -------------------------------------------------------------------------- */
+
+/* "목표 만들기" 버튼은 카드 폭에 꽉 차게 */
+.goals-add {
+  width: 100%;
+}
+
+/* 목표 입력 패널 */
+.goal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goal-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 0.2s var(--ease);
+}
+
+.goal-input::placeholder {
+  color: var(--muted);
+}
+
+.goal-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.goal-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.goal-form__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.goal-form__actions .btn {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+/* 목표 목록 (만든 순서대로 아래로 쌓임) */
+.goals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 목표가 하나도 없으면 목록 영역 자체를 숨김 */
+.goals:empty {
+  display: none;
+}
+
+/* 새로 추가된 목표가 살짝 나타나는 효과 */
+.goal-item {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.goal-item.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* 목표를 눌러 사라질 때 */
+.goal-item.is-removing {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* 목표 하나 (버튼) */
+.goal {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.goal:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.goal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.goal-item.is-removing .goal {
+  pointer-events: none;
+}
+
+/* 목록 위에 여백을 주되, 비어 있으면 카드가 버튼만 남도록 */
+.goals:not(:empty) {
+  margin-top: 14px;
+}
+
+/* 사이드바 안의 각 박스 */
+.card {
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+}
+
+.card__title {
+  margin: 0 0 16px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* 카드 제목과 스위치를 한 줄에 배치 */
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card__head .card__title {
+  margin: 0;
+}
+
+/* 한 줄 (라벨 + 값) */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 구분선이 있는 줄 (음악 볼륨) */
+.row--divider {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.row__label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.row__value {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------------------
+   8-1. 슬라이더 (볼륨, 재생 위치 공용)
+   -------------------------------------------------------------------------- */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  margin: 10px 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* 크롬/엣지/사파리 트랙 */
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius);
+  background: var(--line);
+}
+
+/* 크롬/엣지/사파리 동그란 손잡이 */
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px; /* 트랙 가운데에 오도록 */
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform 0.15s var(--ease);
+}
+
+.range:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* 파이어폭스 트랙 */
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius);
+  background: var(--line);
+}
+
+/* 파이어폭스 손잡이 */
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.range:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius);
+}
+
+/* 재생 위치 슬라이더는 조금 더 촘촘하게 */
+.range--seek {
+  margin: 0;
+  flex: 1;
+}
+
+/* ----------------------------------------------------------------------------
+   8-2. 세그먼트 타이머 (시간 선택 토글 + 동그란 타이머)
+   -------------------------------------------------------------------------- */
+
+/* 10초 / 30초 / 1분 / 3분 / 5분 버튼을 5칸으로 나눠 배치 */
+.segments {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.segment {
+  padding: 7px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+.segment:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* 현재 선택된 시간 */
+.segment.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16181d;
+  font-weight: 600;
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 세그먼트 타이머 켜기/끄기 스위치 */
+.switch {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border-radius: var(--radius);
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.25s var(--ease);
+}
+
+/* 스위치 안의 움직이는 동그라미 */
+.switch::after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 3px;
+  border-radius: 50%;
+  background: #f4f6fa;
+  transition: transform 0.25s var(--ease), background 0.25s var(--ease);
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::after {
+  transform: translateX(18px);
+  background: #16181d;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* 스위치가 꺼졌을 때는 패널 내용을 흐리게 표시 */
+.segment-card.is-off .segments,
+.segment-card.is-off .segment-timer,
+.segment-card.is-off .segment-hint {
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease);
+}
+
+/* 동그란 타이머 본체 */
+.segment-timer {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 20px auto 0;
+  display: grid;
+  place-items: center;
+}
+
+.segment-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* 12시 방향에서 시작 */
+}
+
+.segment-ring__track,
+.segment-ring__progress {
+  fill: none;
+  stroke-width: 5;
+}
+
+.segment-ring__track {
+  stroke: var(--ring-track);
+}
+
+/* 남은 시간만큼 남아 있는 링. script.js 가 dashoffset 을 바꿉니다.
+   2πr = 2 × 3.14159 × 70 = 439.82 */
+.segment-ring__progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 439.82;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.2s linear, stroke 0.3s var(--ease);
+}
+
+.segment-timer__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.segment-timer__time {
+  font-size: 30px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.segment-timer__label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+/* 시간이 다 지나 초과 상태가 되면 링과 숫자를 경고색으로 */
+.segment-timer.is-over .segment-ring__progress {
+  stroke: var(--danger);
+}
+
+.segment-timer.is-over .segment-timer__time {
+  color: var(--danger);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.segment-hint {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* ----------------------------------------------------------------------------
+   8-3. MP3 플레이어
+   -------------------------------------------------------------------------- */
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 파일 이름은 길면 ... 으로 줄임 */
+.file-name {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seek-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* 00:00 시간 표시 */
+.time {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+/* 반복 체크박스 */
+.loop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.loop input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+/* 선택됐을 때 체크 표시 */
+.loop input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.loop input:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #16181d;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.loop input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ----------------------------------------------------------------------------
+   9. 상태별 색상 / 애니메이션 / 반응형
+   -------------------------------------------------------------------------- */
+
+/* 휴식 모드일 때 포인트 색을 민트색으로 변경
+   (script.js 가 body 에 data-phase="break" 를 넣어줍니다) */
+body[data-phase="break"] {
+  --accent: #4fc3a1;
+}
+
+/* 실행 중일 때 시간 글자가 은은하게 깜빡임.
+   깜빡임이 싫으면 아래 animation 줄을 지우거나 주석 처리하세요. */
+.timer.is-running .timer__time {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* 화면이 아주 넓지 않을 때(태블릿 정도)는 세 칸이 한 줄에 들어오도록
+   사이드바 폭과 간격을 조금 줄입니다. */
+@media (max-width: 899px) {
+  body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .layout {
+    gap: 12px;
+  }
+
+  .sidebar {
+    width: clamp(190px, 25vw, 300px);
+  }
+
+  .sidebar--goals {
+    width: clamp(150px, 21vw, 230px);
+  }
+}
+
+/* 더 좁아지면 목표는 타이머 위쪽으로 올라갑니다. */
+@media (max-width: 699px) {
+  .sidebar--goals {
+    width: 100%;
+    max-width: 340px;
+  }
+}
+
+/* 화면이 좁으면 사이드바를 타이머 아래로 내립니다. */
+@media (max-width: 639px) {
+  .layout {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  /* 모바일에서는 목표 → 타이머 → 음악 순서 */
+  .sidebar--goals {
+    order: 0;
+  }
+}
+
+/* 애니메이션을 줄이도록 설정한 사용자에게는 움직임을 끔 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

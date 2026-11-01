@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!----------------------------------------------------------------------------
+  뽀모도로 타이머 - 화면 구조
+  ----------------------------------------------------------------------------
+  수정할 때 참고하세요.
+  - 시간/소리 설정은 script.js 맨 위 CONFIG 에서 바꿉니다.
+  - 색상, 크기, 여백은 style.css 위쪽 변수(:root)에서 바꿉니다.
+  - 아래 data-mode 값(focus / short / long)이 script.js 의 모드 이름과 같아야 합니다.
+  - 사이드바(볼륨/백색소음 스위치/MP3 플레이어)는 <aside class="sidebar"> 안에 있습니다.
+----------------------------------------------------------------------------->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <!-- 모바일에서 화면 폭에 맞게 표시 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>뽀모도로 타이머</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 타이머(가운데)와 사이드바(왼쪽 목표 / 오른쪽 타이머·음악)를 나란히 배치 -->
+  <div class="layout">
+    <!-- ===================== 왼쪽 사이드바: 목표 ===================== -->
+    <aside class="sidebar sidebar--goals" aria-label="목표 목록">
+      <section class="card">
+        <!-- 처음에는 이 버튼만 보입니다 -->
+        <button class="btn btn--ghost btn--sm goals-add" id="goalAdd" type="button">목표 만들기</button>
+
+        <!-- 버튼을 누르면 나타나는 목표 입력 패널 -->
+        <form class="goal-form" id="goalForm" hidden>
+          <input
+            class="goal-input"
+            id="goalInput"
+            type="text"
+            maxlength="60"
+            placeholder="목표를 입력하세요"
+            autocomplete="off"
+            aria-label="목표 입력"
+          />
+          <div class="goal-form__actions">
+            <button class="btn btn--primary btn--sm" type="submit">추가</button>
+            <button class="btn btn--ghost btn--sm" id="goalCancel" type="button">취소</button>
+          </div>
+        </form>
+
+        <!-- 만든 목표가 순서대로 쌓이는 목록 (누르면 완료) -->
+        <ul class="goals" id="goals"></ul>
+      </section>
+    </aside>
+
+    <main class="app">
+      <!-- 상단 제목 영역 -->
+      <header class="app__header">
+        <h1 class="app__title">Pomodoro</h1>
+        <p class="app__subtitle">집중하고, 쉬고, 반복하세요.</p>
+      </header>
+
+      <!-- 모드 선택 탭: data-mode 값으로 script.js 가 모드를 구분합니다 -->
+      <nav class="modes" aria-label="타이머 모드">
+        <button class="mode is-active" data-mode="focus" type="button">집중</button>
+        <button class="mode" data-mode="short" type="button">짧은 휴식</button>
+        <button class="mode" data-mode="long" type="button">긴 휴식</button>
+      </nav>
+
+      <!-- 타이머 본체: SVG 링 + 가운데 시간 텍스트 -->
+      <section class="timer">
+        <!-- 원형 진행 링. r(반지름)을 바꾸면 script.js 의 CIRCUMFERENCE 도 함께 바꿔야 합니다. -->
+        <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+          <circle class="ring__track" cx="120" cy="120" r="108" />
+          <circle class="ring__progress" cx="120" cy="120" r="108" />
+        </svg>
+
+        <div class="timer__content">
+          <!-- 남은 시간 (script.js 가 00:00 형식으로 채워 넣습니다) -->
+          <span class="timer__time" id="time" role="timer" aria-live="off">25:00</span>
+          <!-- 현재 모드 이름 (집중 시간 / 짧은 휴식 / 긴 휴식) -->
+          <span class="timer__label" id="label">집중 시간</span>
+        </div>
+      </section>
+
+      <!-- 시작/일시정지, 초기화 버튼 -->
+      <div class="controls">
+        <button class="btn btn--primary" id="startPause" type="button">시작</button>
+        <button class="btn btn--ghost" id="reset" type="button">초기화</button>
+      </div>
+
+      <!-- 하단: 완료한 집중 횟수 (점 4개 + 숫자) -->
+      <footer class="sessions">
+        <span class="sessions__label">완료한 집중</span>
+        <div class="sessions__dots" id="dots" aria-label="완료한 집중 세션"></div>
+        <span class="sessions__count" id="count">0</span>
+      </footer>
+    </main>
+
+    <!-- ===================== 사이드바 ===================== -->
+    <aside class="sidebar" aria-label="세그먼트 타이머와 음악 플레이어">
+      <!-- 1) 세그먼트 타이머 (뽀모도로와 별개로 움직이는 보조 타이머) -->
+      <section class="card segment-card" id="segmentCard">
+        <div class="card__head">
+          <h2 class="card__title">세그먼트 타이머</h2>
+          <!-- 켜면 동작하고, 끄면 시간이 멈추고 초기화됩니다 -->
+          <input
+            class="switch"
+            type="checkbox"
+            id="segmentToggle"
+            role="switch"
+            checked
+            aria-label="세그먼트 타이머 켜기 또는 끄기"
+          />
+        </div>
+
+        <!-- 시간 선택 토글: data-seconds 값이 실제 초 단위 시간입니다 -->
+        <div class="segments" role="group" aria-label="세그먼트 시간 선택">
+          <button class="segment is-active" data-seconds="10" type="button">10초</button>
+          <button class="segment" data-seconds="30" type="button">30초</button>
+          <button class="segment" data-seconds="60" type="button">1분</button>
+          <button class="segment" data-seconds="180" type="button">3분</button>
+          <button class="segment" data-seconds="300" type="button">5분</button>
+        </div>
+
+        <!-- 동그란 타이머: 뽀모도로가 "집중" 상태로 실행 중일 때만 줄어듭니다 -->
+        <div class="segment-timer" id="segmentTimer">
+          <svg class="segment-ring" viewBox="0 0 160 160" aria-hidden="true">
+            <circle class="segment-ring__track" cx="80" cy="80" r="70" />
+            <circle class="segment-ring__progress" cx="80" cy="80" r="70" />
+          </svg>
+          <div class="segment-timer__content">
+            <span class="segment-timer__time" id="segmentTime">00:10</span>
+            <span class="segment-timer__label" id="segmentLabel">남은 시간</span>
+          </div>
+        </div>
+
+        <p class="segment-hint">집중 중에만 줄어들어요<br />Space 키로 초기화</p>
+      </section>
+
+      <!-- 2) MP3 플레이어 (아래쪽에 음악 볼륨 슬라이더 포함) -->
+      <section class="card">
+        <h2 class="card__title">음악</h2>
+
+        <!-- 실제 파일 선택창은 숨겨두고, 버튼을 누르면 대신 열립니다 -->
+        <input type="file" id="fileInput" accept="audio/*,.mp3" hidden />
+
+        <div class="file-row">
+          <button class="btn btn--ghost btn--sm" id="fileButton" type="button">MP3 선택</button>
+          <p class="file-name" id="fileName" title="">선택된 파일 없음</p>
+        </div>
+
+        <!-- 재생 위치 / 시간 -->
+        <div class="seek-row">
+          <span class="time" id="currentTime">00:00</span>
+          <input class="range range--seek" type="range" id="seek" min="0" max="0" value="0" step="0.1" aria-label="재생 위치" />
+          <span class="time" id="duration">00:00</span>
+        </div>
+
+        <!-- 재생 버튼 + 반복 -->
+        <div class="player-row">
+          <button class="btn btn--primary btn--sm" id="playPause" type="button" disabled>재생</button>
+          <label class="loop">
+            <input type="checkbox" id="loop" checked />
+            반복
+          </label>
+        </div>
+
+        <!-- 음악 볼륨 슬라이더 -->
+        <div class="row row--divider">
+          <label class="row__label" for="volume">음악 볼륨</label>
+          <span class="row__value" id="volumeValue">70%</span>
+        </div>
+        <input
+          class="range"
+          type="range"
+          id="volume"
+          min="0"
+          max="100"
+          step="1"
+          value="70"
+          aria-label="음악 볼륨"
+        />
+
+        <!-- 소리만 재생하는 숨은 오디오 요소 -->
+        <audio id="audio" loop preload="metadata"></audio>
+      </section>
+    </aside>
+  </div>
+
+  <!-- 스크립트는 화면 요소들이 모두 만들어진 뒤에 불러와야 합니다. -->
+  <script src="script.js"></script>
+</body>
+</html>
